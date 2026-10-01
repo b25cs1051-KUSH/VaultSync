@@ -1,0 +1,24 @@
+# Local environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+
+# Harness output belongs outside the submission repository
+runs/
+checks/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

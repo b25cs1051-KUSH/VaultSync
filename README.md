@@ -1,6 +1,14 @@
 # VaultSync shared agent workspace
 
-This repository is the shared source of truth for the BAND factory.
+This repository is the shared source of truth and judged result artifact for the BAND factory building the Pocketful track.
+
+## Project status
+
+- Phase 0: challenge requirements mapped across all four stages.
+- Phase 1: reproducible WSL2, Docker, and official harness environment complete.
+- Pocketful implementation: not started, as required by the plan's factory-first sequence.
+
+See `docs/phase-0-requirements-map.md`, `docs/phase-1-environment-setup.md`, and the provisional `FACTORY.md` for the current evidence and boundaries.
 
 ## Agent workflow
 
@@ -13,3 +21,6 @@ This repository is the shared source of truth for the BAND factory.
 
 Verifier reports are stored in `handoffs/verifier/`. They contain the tested commit hash, exact commands, trimmed outputs, and the PASS or REJECT verdict.
 
+## Workspace boundary
+
+Keep the official `band-ai/dark-factory-wearedevs` repository beside this checkout, never inside it. Keep generated harness evidence in the sibling `checks/` directory so reference infrastructure and local artifacts cannot enter the judged repository.
