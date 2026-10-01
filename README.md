@@ -6,9 +6,10 @@ This repository is the shared source of truth and judged result artifact for the
 
 - Phase 0: challenge requirements mapped across all four stages.
 - Phase 1: reproducible WSL2, Docker, and official harness environment complete.
+- Phase 2: four-seat factory architecture and acceptance authority defined.
 - Pocketful implementation: not started, as required by the plan's factory-first sequence.
 
-See `docs/phase-0-requirements-map.md`, `docs/phase-1-environment-setup.md`, and the provisional `FACTORY.md` for the current evidence and boundaries.
+See `docs/phase-0-requirements-map.md`, `docs/phase-1-environment-setup.md`, `docs/phase-2-factory-architecture.md`, and the provisional `FACTORY.md` for the current evidence and boundaries.
 
 ## Agent workflow
 

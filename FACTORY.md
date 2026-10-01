@@ -1,6 +1,6 @@
 # VaultSync software factory
 
-Status: Phase 1 environment scaffold. The reusable factory architecture is intentionally deferred to Phase 2 of the implementation plan.
+Status: Phase 2 architecture defined. Detailed handoff protocols and final mandate authoring remain deferred to their later plan phases.
 
 ## Purpose
 
@@ -10,9 +10,11 @@ This repository is the judged result artifact for the Pocketful track. The facto
 
 - Phase 0 requirements mapping is complete.
 - Phase 1 local tooling and official harness setup are complete.
+- Phase 2 factory roles, authority boundaries, lifecycle, and quality gates are defined in `docs/phase-2-factory-architecture.md`.
 - The official challenge repository is maintained separately and pinned to revision `803560d2a678ace1414465c098eb0ab5380ffade`.
 - No Pocketful implementation exists yet.
-- Workflow design, handoff contracts, acceptance gates, and repair loops will be specified in Phase 2.
+- Detailed communication, handoff, rejection, and rework message formats remain deferred to Phase 3.
+- Existing mandate files remain provisional until they are reconciled with the approved architecture and handoff protocol in Phase 4.
 
 The stage directories are placeholders only. A stage is not runnable or complete until its later implementation phase supplies source code, a `Dockerfile`, and a `RUN.md` and passes the official harness.
 
@@ -25,7 +27,10 @@ The stage directories are placeholders only. A stage is not runnable or complete
 
 The authoritative generic role contracts are in `mandates/`.
 
+The architecture is authoritative for role boundaries and decision rights. Until the Phase 4 reconciliation is complete, any conflict between a provisional mandate and the architecture must be escalated rather than guessed.
+
 ## Evidence index
 
 - Phase 0: `docs/phase-0-requirements-map.md`
 - Phase 1: `docs/phase-1-environment-setup.md`
+- Phase 2: `docs/phase-2-factory-architecture.md`
