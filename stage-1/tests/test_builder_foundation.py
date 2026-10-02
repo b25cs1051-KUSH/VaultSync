@@ -296,6 +296,37 @@ class IdempotencyStateTests(unittest.TestCase):
         )
         self.assertEqual([201, 201, 201], [first[0], second[0], third[0]])
 
+    def test_fifty_conflicting_keys_never_overdraw(self):
+        barrier = threading.Barrier(50)
+        results = []
+        results_lock = threading.Lock()
+
+        def send(index):
+            barrier.wait()
+            try:
+                result = self.store.create_payment_idempotent(
+                    self.user_id,
+                    self.token,
+                    f"drain-{index}",
+                    {"to_handle": "bob", "amount": 3000},
+                )
+            except SERVER.RequestError as error:
+                result = (error.status, error.code)
+            with results_lock:
+                results.append(result)
+
+        threads = [threading.Thread(target=send, args=(index,)) for index in range(50)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(3, sum(result[0] == 201 for result in results))
+        self.assertEqual(47, sum(result == (409, "insufficient_funds") for result in results))
+        state = self.store.snapshot()
+        self.assertEqual(1000, state["users"]["u_ada"]["balance"])
+        self.assertEqual(11500, state["users"]["u_bob"]["balance"])
+        self.assertEqual(12500, sum(user["balance"] for user in state["users"].values()))
+
 
 if __name__ == "__main__":
     unittest.main()
