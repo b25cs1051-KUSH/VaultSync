@@ -74,7 +74,7 @@ Depends on: nothing.
 - S1.2 **High-risk (data shape, shared state).** State store and `POST /_test/reset` with fixture validation (negative balance 422 changes nothing, minor_units), seeded users with hashed passwords, seeded payments and requests with server timestamps, operators. Done means: reset returns 204 and a second reset fully replaces state. **Checkpoint: hand off after this step.**
 - S1.3 Signup, login, bearer auth, `GET /me`. Done means: AC3 and AC4 hold.
 
-### WP2 Payments, idempotency, feed (owner: Builder) — ASSIGNED; S2.1 CHECKPOINT at a0e6d84b8b97cdd401f6222ce1b6234251fc3d88 under attack and verification
+### WP2 Payments, idempotency, feed (owner: Builder) — ASSIGNED; S2.1 checkpoint ATTACK PASS + VERIFY PASS at a0e6d84b8b97cdd401f6222ce1b6234251fc3d88; S2.2 in progress
 Depends on: WP1.
 - S2.1 **High-risk (concurrency, shared state).** Idempotency layer shared by all five write paths: per (user, method, path) key, canonical JSON body comparison, claim-before-validate ordering, concurrent identical first uses give one 201. Done means: AC9 holds for `POST /payments`. **Checkpoint.**
 - S2.2 **High-risk (exact arithmetic, concurrency).** `POST /payments` with all validation rows and an atomic transfer. Done means: AC5 holds and 50 concurrent payments keep I1 and I2.
