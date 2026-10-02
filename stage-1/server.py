@@ -326,13 +326,21 @@ class PocketfulHandler(BaseHTTPRequestHandler):
             self._send_error(exc.status, exc.code, exc.message)
 
 
+class PocketfulHTTPServer(ThreadingHTTPServer):
+    # The default socketserver backlog is only five. Bursts at the documented
+    # 50-request concurrency limit can otherwise be dropped before a worker
+    # thread is created, especially while reset workers hash passwords.
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def main() -> None:
     raw_port = os.environ.get("PORT", "8080")
     try:
         port = int(raw_port)
     except ValueError as exc:
         raise SystemExit("PORT must be an integer") from exc
-    server = ThreadingHTTPServer(("0.0.0.0", port), PocketfulHandler)
+    server = PocketfulHTTPServer(("0.0.0.0", port), PocketfulHandler)
     server.serve_forever()
 
 
