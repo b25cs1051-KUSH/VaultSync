@@ -1,27 +1,12 @@
-# VaultSync shared agent workspace
+# VaultSync
 
-This repository is the shared source of truth and judged result artifact for the BAND factory building the Pocketful track.
+Team JK Hackers' entry to the WeAreDevelopers × BAND Dark Factory hackathon, track **pocketful**.
 
-## Project status
-
-- Phase 0: challenge requirements mapped across all four stages.
-- Phase 1: reproducible WSL2, Docker, and official harness environment complete.
-- Phase 2: four-seat factory architecture and acceptance authority defined.
-- Pocketful implementation: not started, as required by the plan's factory-first sequence.
-
-See `docs/phase-0-requirements-map.md`, `docs/phase-1-environment-setup.md`, `docs/phase-2-factory-architecture.md`, and the provisional `FACTORY.md` for the current evidence and boundaries.
-
-## Agent workflow
-
-1. Before starting a work item, fetch and update from `origin/main`.
-2. Read the latest task, plan, and handoff files before acting.
-3. Change only files owned by the current seat or explicitly assigned in the plan.
-4. Commit completed work with the seat name and work-item ID.
-5. Pull with rebase immediately before pushing, rerun affected checks, then push.
-6. Never force-push, overwrite another seat's work, or resolve an ambiguous conflict automatically.
-
-Verifier reports are stored in `handoffs/verifier/`. They contain the tested commit hash, exact commands, trimmed outputs, and the PASS or REJECT verdict.
-
-## Workspace boundary
-
-Keep the official `band-ai/dark-factory-wearedevs` repository beside this checkout, never inside it. Keep generated harness evidence in the sibling `checks/` directory so reference infrastructure and local artifacts cannot enter the judged repository.
+| Path | What it is |
+|---|---|
+| `FACTORY.md` | The factory: seats, design choices, costs, failure handling |
+| `AGENTS.md` | Shared protocol every seat follows |
+| `mandates/` | One mandate per seat |
+| `stage-N/` | The service the band built for stage N, with `Dockerfile`, `RUN.md` and `PLAN.md` |
+| `handoffs/verifier/` | The Verifier's reports |
+| `room.json` | The full BAND room log |
