@@ -4,7 +4,7 @@ Run the suite against an already-running service:
 
 ```powershell
 $env:BASE_URL = "http://127.0.0.1:9000"
-python stage-1/tests/adversarial/run.py
+python stage-1/adversarial/run.py
 ```
 
 The runner uses only the Python standard library. It prints every test name and
@@ -14,7 +14,7 @@ runner generates and prints a seed.
 List the inventory without contacting a service:
 
 ```powershell
-python stage-1/tests/adversarial/run.py --list
+python stage-1/adversarial/run.py --list
 ```
 
 ## Coverage map
