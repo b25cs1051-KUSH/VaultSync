@@ -68,7 +68,7 @@ Depends on: nothing. Built from the specification, AC, invariants and R1–R20 o
 - S0.1 Suite skeleton runnable against a base URL. Done means: one command runs it and reports per-test results.
 - S0.2 Tests for R1–R20 and I1–I8, including concurrency bursts of 50. Done means: committed under `stage-1/adversarial/`, each test names the R/I/AC id it covers.
 
-### WP1 Foundation (owner: Builder) — ASSIGNED (S1.1 at dd35e11)
+### WP1 Foundation (owner: Builder) — S1.2 CHECKPOINT IMPLEMENTED at fd62c3c15a9907a3f843dcffc2bfe35540bb84f6, under attack and verification
 Depends on: nothing.
 - S1.1 Service skeleton, Dockerfile, RUN.md, `PORT` handling, `GET /health`, JSON error envelope, body parsing (400 on unparseable or non-object). Done means: container builds and `/health` returns 200 in isolated mode.
 - S1.2 **High-risk (data shape, shared state).** State store and `POST /_test/reset` with fixture validation (negative balance 422 changes nothing, minor_units), seeded users with hashed passwords, seeded payments and requests with server timestamps, operators. Done means: reset returns 204 and a second reset fully replaces state. **Checkpoint: hand off after this step.**
@@ -104,7 +104,8 @@ Depends on: WP3, WP4.
 - D6 (assumption). Fixture validation on reset: negative balance, `minor_units` outside {0,2,3}, or a body that is not a valid fixture object gives 422 `validation_failed` and changes nothing.
 - D7. All five seats READY at stage start. WP0 assigned to Breaker, WP1 to Builder.
 - D8. Builder push blocked by uncommitted Breaker files in the Builder working tree. Builder stages only its own paths and pulls with --autostash. Breaker works only in its own clone and commits under stage-1/adversarial/.
-- D9. Adversarial suite lives at stage-1/adversarial/ (41 tests, run.py with BASE_URL), moved there by the Breaker at fb53973. Breaker clone: D:HACKATHONS_WAD_AMDVaultSync-breaker.
+- D9. Adversarial suite lives at stage-1/adversarial/ (41 tests, run.py with BASE_URL), moved there by the Breaker at fb53973 in its own clone (VaultSync-breaker on machine B).
+- D10. The stage specification is committed verbatim at stage-1/SPEC.md. Every handoff after the first names it with the exact revision, so every seat on either machine can open the complete text instead of receiving it split across many messages.
 
 ## Constraints (verbatim from the task)
 
