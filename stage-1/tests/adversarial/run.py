@@ -12,7 +12,22 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()
+    parser.add_argument("--list", action="store_true", help="list discovered tests without running them")
+    args = parser.parse_args()
+
+    suite_dir = Path(__file__).resolve().parent
+    suite = unittest.defaultTestLoader.discover(str(suite_dir), pattern="test_*.py")
+    if args.list:
+        def walk(node: unittest.TestSuite):
+            for item in node:
+                if isinstance(item, unittest.TestSuite):
+                    yield from walk(item)
+                else:
+                    yield item
+
+        for test in walk(suite):
+            print(test.id())
+        return 0
 
     if not os.environ.get("BASE_URL"):
         parser.error("BASE_URL must name the running service, e.g. http://127.0.0.1:9000")
@@ -21,12 +36,9 @@ def main() -> int:
     os.environ["ADVERSARIAL_SEED"] = str(seed)
     print(f"ADVERSARIAL_SEED={seed}", flush=True)
 
-    suite_dir = Path(__file__).resolve().parent
-    suite = unittest.defaultTestLoader.discover(str(suite_dir), pattern="test_*.py")
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
