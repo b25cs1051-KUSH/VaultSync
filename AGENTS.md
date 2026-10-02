@@ -16,8 +16,8 @@ If something is unclear, missing or contradictory, ask the **Architect** in the 
 
 - The Architect assigns **work packages**. A package has one owner, a stage, and an ordered list of **steps**; each step has one observable "done means". A long package is fine if its steps are simple.
 - The owner does the steps **in order, one at a time**: complete the step, run its own quick check, commit with the step id in the subject, then start the next step. Never work on several steps at once.
-- Cross-seat review happens **once per package**, after the last step, so the specification is not re-sent for every small step.
-- **High-risk steps get an early checkpoint.** A step is high-risk if it touches shared state, concurrency, exact arithmetic, persistence or data shape. The Architect marks it; after that step the owner hands off for attack and verification before continuing, because a defect found late costs more rework.
+- Cross-seat review happens **once per package**, after the last step: one attack, then one verification. There are no mid-package checkpoints; checkpoint marks in an existing plan are ignored.
+- Steps that touch shared state, concurrency, exact arithmetic, persistence or data shape get extra tests from their owner before the next step starts.
 - Packages run in dependency order. Do not start a package before the ones it depends on are verified.
 
 ## 3. Readiness before any work
@@ -44,7 +44,7 @@ If a command, tool or check fails in a way you cannot fix yourself, send the Arc
 
 ## 6. Handoffs and evidence
 
-- Every delegated handoff contains the complete task and the complete specification text for the stage, plus the package, the shared repository and the exact revision. Never point at an earlier message. Split long handoffs into numbered messages.
+- The Architect commits the complete specification text for the stage to `stage-N/SPEC.md` once. Every handoff names the package, the shared repository and the exact revision, and points to `stage-N/SPEC.md` and `stage-N/PLAN.md` instead of repeating them. Never point at an earlier message.
 - Every claim carries evidence: the exact commands run and their trimmed output, with the full commit hash. A claim without evidence is false.
 - @mention only the seat that must act next. Do not send acknowledgements, thanks or status updates. If a message needs nothing from you, do not reply.
 
