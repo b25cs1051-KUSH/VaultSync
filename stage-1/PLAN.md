@@ -68,7 +68,7 @@ Depends on: nothing. Built from the specification, AC, invariants and R1–R20 o
 - S0.1 Suite skeleton runnable against a base URL. Done means: one command runs it and reports per-test results.
 - S0.2 Tests for R1–R20 and I1–I8, including concurrency bursts of 50. Done means: committed under `stage-1/adversarial/`, each test names the R/I/AC id it covers.
 
-### WP1 Foundation (owner: Builder) — REWORK (S1.2 at fd62c3c ATTACK FAIL: dropped connections under 50 in flight; rework 1)
+### WP1 Foundation (owner: Builder) — S1.2 CHECKPOINT IMPLEMENTED at db471c4a4aead6a456445f8c48983d690037ff5e (rework 1 of fd62c3c), under attack and verification
 Depends on: nothing.
 - S1.1 Service skeleton, Dockerfile, RUN.md, `PORT` handling, `GET /health`, JSON error envelope, body parsing (400 on unparseable or non-object). Done means: container builds and `/health` returns 200 in isolated mode.
 - S1.2 **High-risk (data shape, shared state).** State store and `POST /_test/reset` with fixture validation (negative balance 422 changes nothing, minor_units), seeded users with hashed passwords, seeded payments and requests with server timestamps, operators. Done means: reset returns 204 and a second reset fully replaces state. **Checkpoint: hand off after this step.**
