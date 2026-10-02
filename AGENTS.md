@@ -22,7 +22,7 @@ If something is unclear, missing or contradictory, ask the **Architect** in the 
 
 ## 3. Readiness before any work
 
-No seat starts work until every seat has answered the Architect's readiness check with:
+No seat starts work until every seat, reserves included, has answered the Architect's readiness check with:
 ```
 READY · <seat> · Harness <name> · Model <id> · pull OK · check tool OK
 ```
@@ -30,7 +30,7 @@ READY · <seat> · Harness <name> · Model <id> · pull OK · check tool OK
 
 ## 4. Lifecycle
 
-`PLANNED → ASSIGNED → IMPLEMENTED → ATTACKED → VERIFIED → ACCEPTED`, with `REWORK` from ATTACKED or VERIFIED back to ASSIGNED. A repaired commit is a new candidate: earlier attack and verification results do not carry over to it. A REJECT is binding. Only the Architect records ACCEPTED, and only after a Verifier PASS on that exact revision.
+`PLANNED → ASSIGNED → IMPLEMENTED → ATTACKED → VERIFIED → ACCEPTED`, with `REWORK` from ATTACKED or VERIFIED back to ASSIGNED. A repaired commit is a new candidate: earlier attack and verification results do not carry over to it. A REJECT is binding. Only the Architect records ACCEPTED, and only after a Verifier PASS on that exact revision. No seat ever attacks or verifies work it built.
 
 ## 5. Effort matches risk
 

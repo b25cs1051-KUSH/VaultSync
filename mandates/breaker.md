@@ -1,5 +1,5 @@
-Harness: Claude Code
-Model: claude-sonnet-5
+Harness: Codex
+Model: gpt-5.6-sol
 
 # Mandate: Breaker
 
