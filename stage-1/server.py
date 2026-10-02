@@ -4,6 +4,7 @@ import hmac
 import math
 import os
 import re
+import secrets
 import threading
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -83,6 +84,20 @@ def password_matches(password: str, encoded: str) -> bool:
 def _valid_email(email: str) -> bool:
     local, separator, domain = email.partition("@")
     return bool(local and separator and domain and "@" not in domain)
+
+
+def derive_handle(email: str) -> str:
+    local = email.partition("@")[0].lower()
+    return re.sub(r"[^a-z0-9_]", "_", local)[:20]
+
+
+def required_body_string(body: dict, field: str) -> str:
+    if field not in body:
+        raise validation_error(f"Missing field: {field}")
+    value = body[field]
+    if not isinstance(value, str):
+        raise RequestError(400, "malformed_request", f"{field} must be a string")
+    return value
 
 
 def _require_id(value, field: str) -> str:
@@ -261,6 +276,81 @@ class StateStore:
         with self.lock:
             return deepcopy(self._state)
 
+    def signup(self, email: str, password: str, display_name: str) -> dict:
+        normalized_email = email.lower()
+        handle = derive_handle(email)
+        encoded_password = password_hash(password)
+        with self.lock:
+            state = self._state
+            if normalized_email in state["user_id_by_email"]:
+                raise RequestError(409, "email_taken", "Email is already registered")
+            if handle in state["user_id_by_handle"]:
+                raise RequestError(409, "handle_taken", "Derived handle is already taken")
+            while True:
+                user_id = "u_" + secrets.token_urlsafe(18)
+                if user_id not in state["users"]:
+                    break
+            user = {
+                "id": user_id,
+                "email": email,
+                "email_normalized": normalized_email,
+                "password_hash": encoded_password,
+                "display_name": display_name,
+                "handle": handle,
+                "balance": 0,
+            }
+            state["users"][user_id] = user
+            state["user_id_by_email"][normalized_email] = user_id
+            state["user_id_by_handle"][handle] = user_id
+            token = self._new_token(state)
+            state["tokens"][token] = user_id
+            return {"user_id": user_id, "display_name": display_name, "token": token}
+
+    def login(self, email: str, password: str) -> dict:
+        normalized_email = email.lower()
+        with self.lock:
+            state = self._state
+            user_id = state["user_id_by_email"].get(normalized_email)
+            user = state["users"].get(user_id) if user_id is not None else None
+            encoded_password = user["password_hash"] if user is not None else None
+        if encoded_password is None or not password_matches(password, encoded_password):
+            raise RequestError(401, "unauthenticated", "Invalid email or password")
+        with self.lock:
+            state = self._state
+            current = state["users"].get(user_id)
+            if current is None or current["password_hash"] != encoded_password:
+                raise RequestError(401, "unauthenticated", "Invalid email or password")
+            token = self._new_token(state)
+            state["tokens"][token] = user_id
+            return {
+                "user_id": user_id,
+                "display_name": current["display_name"],
+                "token": token,
+            }
+
+    def authenticate(self, token: str) -> dict:
+        with self.lock:
+            state = self._state
+            user_id = state["tokens"].get(token)
+            user = state["users"].get(user_id) if user_id is not None else None
+            if user is None:
+                raise RequestError(401, "unauthenticated", "Invalid bearer token")
+            return {
+                "user_id": user_id,
+                "display_name": user["display_name"],
+                "handle": user["handle"],
+                "balance": user["balance"],
+                "currency": state["currency"],
+                "minor_units": state["minor_units"],
+            }
+
+    @staticmethod
+    def _new_token(state: dict) -> str:
+        while True:
+            token = secrets.token_urlsafe(32)
+            if token not in state["tokens"]:
+                return token
+
 
 STORE = StateStore()
 
@@ -308,19 +398,64 @@ class PocketfulHandler(BaseHTTPRequestHandler):
     def _path(self) -> str:
         return urlsplit(self.path).path
 
+    def _authenticated_user(self) -> dict:
+        authorization = self.headers.get("Authorization")
+        if authorization is None:
+            raise RequestError(401, "unauthenticated", "Bearer token is required")
+        parts = authorization.split(" ")
+        if len(parts) != 2 or parts[0] != "Bearer" or not parts[1]:
+            raise RequestError(401, "unauthenticated", "Bearer token is malformed")
+        return STORE.authenticate(parts[1])
+
+    def _validate_auth_body(self, body: dict) -> tuple[str, str, str | None]:
+        email = required_body_string(body, "email")
+        password = required_body_string(body, "password")
+        if not _valid_email(email):
+            raise validation_error("email must have the form local@domain")
+        if len(password) < 8:
+            raise validation_error("password must be at least 8 characters")
+        display_name = None
+        if self._path() == "/auth/signup":
+            display_name = required_body_string(body, "display_name")
+        return email, password, display_name
+
     def do_GET(self) -> None:
-        if self._path() == "/health":
-            self._send_json(200, {"status": "ok"})
-            return
-        self._send_error(404, "not_found", "No such resource")
+        try:
+            path = self._path()
+            if path == "/health":
+                self._send_json(200, {"status": "ok"})
+                return
+            if path == "/_test/export":
+                self._send_error(404, "not_found", "No such resource")
+                return
+            user = self._authenticated_user()
+            if path == "/me":
+                self._send_json(200, user)
+                return
+            self._send_error(404, "not_found", "No such resource")
+        except RequestError as exc:
+            self._send_error(exc.status, exc.code, exc.message)
 
     def do_POST(self) -> None:
         try:
-            if self._path() == "/_test/reset":
+            path = self._path()
+            if path == "/_test/reset":
                 fixture = self._read_json_object()
                 STORE.replace_from_fixture(fixture)
                 self._send_empty(204)
                 return
+            if path in {"/auth/signup", "/auth/login"}:
+                body = self._read_json_object()
+                email, password, display_name = self._validate_auth_body(body)
+                if path == "/auth/signup":
+                    self._send_json(201, STORE.signup(email, password, display_name))
+                else:
+                    self._send_json(200, STORE.login(email, password))
+                return
+            if path == "/_test/import":
+                self._send_error(404, "not_found", "No such resource")
+                return
+            self._authenticated_user()
             self._send_error(404, "not_found", "No such resource")
         except RequestError as exc:
             self._send_error(exc.status, exc.code, exc.message)

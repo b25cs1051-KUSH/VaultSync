@@ -123,6 +123,40 @@ class ResetStateTests(unittest.TestCase):
             all(value in {(frozenset({"u_old"}), 10), (frozenset({"u_new"}), 20)} for value in observed)
         )
 
+    def test_signup_login_multiple_tokens_and_derived_handle(self):
+        store = SERVER.StateStore()
+        store.replace_from_fixture(fixture())
+        first_login = store.login("U_ADA@example.com", "correct horse")
+        second_login = store.login("u_ada@example.com", "correct horse")
+        self.assertNotEqual(first_login["token"], second_login["token"])
+        self.assertEqual("ada", store.authenticate(first_login["token"])["handle"])
+        self.assertEqual("ada", store.authenticate(second_login["token"])["handle"])
+
+        created = store.signup(
+            "UPPER.long-local+suffix@example.com", "another horse", "Derived"
+        )
+        me = store.authenticate(created["token"])
+        self.assertEqual("upper_long_local_suf", me["handle"])
+        self.assertEqual(0, me["balance"])
+        serialized = repr(store.snapshot())
+        self.assertNotIn("another horse", serialized)
+
+    def test_signup_conflicts_are_atomic(self):
+        store = SERVER.StateStore()
+        store.replace_from_fixture(fixture())
+        before = store.snapshot()
+        with self.assertRaises(SERVER.RequestError) as email_taken:
+            store.signup("U_ADA@EXAMPLE.COM", "another horse", "Duplicate")
+        self.assertEqual("email_taken", email_taken.exception.code)
+        self.assertEqual(before, store.snapshot())
+
+        store.signup("A-D-A@example.net", "another horse", "First")
+        before_collision = store.snapshot()
+        with self.assertRaises(SERVER.RequestError) as handle_taken:
+            store.signup("a+d+a@example.net", "another horse", "Second")
+        self.assertEqual("handle_taken", handle_taken.exception.code)
+        self.assertEqual(before_collision, store.snapshot())
+
 
 if __name__ == "__main__":
     unittest.main()
