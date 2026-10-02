@@ -103,6 +103,7 @@ Depends on: WP3, WP4.
 - D5 (assumption). `transfers` missing, not an array, empty, over 32 entries, or containing a non-object entry is 422 `validation_failed` (§11 "malformed batch shape"). Within entries, ordinary payment field rules apply (wrong-typed handle is 400 per §5).
 - D6 (assumption). Fixture validation on reset: negative balance, `minor_units` outside {0,2,3}, or a body that is not a valid fixture object gives 422 `validation_failed` and changes nothing.
 - D7. All five seats READY at stage start. WP0 assigned to Breaker, WP1 to Builder.
+- D8. Builder push blocked by uncommitted Breaker files in the Builder working tree. Builder stages only its own paths and pulls with --autostash. Breaker works only in its own clone and commits under stage-1/adversarial/.
 
 ## Constraints (verbatim from the task)
 
