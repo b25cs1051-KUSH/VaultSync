@@ -100,6 +100,30 @@ def required_body_string(body: dict, field: str) -> str:
     return value
 
 
+def _reject_json_constant(value: str):
+    raise ValueError(f"Invalid JSON constant: {value}")
+
+
+def _normalize_json_value(value):
+    if isinstance(value, dict):
+        return {key: _normalize_json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_json_value(item) for item in value]
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    return value
+
+
+def canonical_json(value) -> str:
+    return json.dumps(
+        _normalize_json_value(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
 def _require_id(value, field: str) -> str:
     return require_string(value, field, allow_empty=False, max_length=64)
 
@@ -344,6 +368,105 @@ class StateStore:
                 "minor_units": state["minor_units"],
             }
 
+    def execute_idempotent(
+        self,
+        user_id: str,
+        token: str,
+        method: str,
+        path: str,
+        key: str,
+        body: dict,
+        operation,
+    ) -> tuple[int, dict]:
+        body_fingerprint = canonical_json(body)
+        scope = canonical_json([user_id, method, path, key])
+        with self.lock:
+            state = self._state
+            if state["tokens"].get(token) != user_id:
+                raise RequestError(401, "unauthenticated", "Invalid bearer token")
+            previous = state["idempotency"].get(scope)
+            if previous is not None:
+                if previous["body"] != body_fingerprint:
+                    raise RequestError(
+                        409,
+                        "idempotency_key_reuse",
+                        "Idempotency key was used with a different body",
+                    )
+                return 200, deepcopy(previous["response"])
+            response = operation(state)
+            state["idempotency"][scope] = {
+                "body": body_fingerprint,
+                "status": 201,
+                "response": deepcopy(response),
+            }
+            return 201, deepcopy(response)
+
+    def create_payment_idempotent(
+        self, user_id: str, token: str, key: str, body: dict
+    ) -> tuple[int, dict]:
+        return self.execute_idempotent(
+            user_id,
+            token,
+            "POST",
+            "/payments",
+            key,
+            body,
+            lambda state: self._create_payment(state, user_id, body),
+        )
+
+    @staticmethod
+    def _create_payment(state: dict, user_id: str, body: dict) -> dict:
+        if "to_handle" not in body:
+            raise validation_error("Missing field: to_handle")
+        to_handle = body["to_handle"]
+        if not isinstance(to_handle, str):
+            raise RequestError(400, "malformed_request", "to_handle must be a string")
+        if "amount" not in body:
+            raise validation_error("Missing field: amount")
+        amount = require_integral(body["amount"], "amount", 1, 1_000_000_000)
+        note = body.get("note", "")
+        if not isinstance(note, str) or len(note) > 200:
+            raise validation_error("note must be a string of at most 200 characters")
+        visibility = body.get("visibility", "public")
+        if not isinstance(visibility, str) or visibility not in {"public", "private"}:
+            raise validation_error("visibility must be public or private")
+
+        from_user = state["users"].get(user_id)
+        if from_user is None:
+            raise RequestError(401, "unauthenticated", "Invalid bearer token")
+        if to_handle == from_user["handle"]:
+            raise RequestError(422, "self_payment", "Cannot pay yourself")
+        to_user_id = state["user_id_by_handle"].get(to_handle)
+        if to_user_id is None:
+            raise RequestError(404, "not_found", "Recipient was not found")
+        to_user = state["users"][to_user_id]
+        if from_user["balance"] < amount:
+            raise RequestError(409, "insufficient_funds", "Insufficient funds")
+
+        while True:
+            payment_id = "p_" + secrets.token_urlsafe(18)
+            if payment_id not in state["payments"]:
+                break
+        payment = {
+            "payment_id": payment_id,
+            "from_user_id": user_id,
+            "from_handle": from_user["handle"],
+            "to_user_id": to_user_id,
+            "to_handle": to_handle,
+            "amount": amount,
+            "currency": state["currency"],
+            "note": note,
+            "visibility": visibility,
+            "request_id": None,
+            "settlement_id": None,
+            "created_at": utc_now(),
+        }
+        from_user["balance"] -= amount
+        to_user["balance"] += amount
+        state["payments"][payment_id] = payment
+        state["payment_order"].append(payment_id)
+        return payment
+
     @staticmethod
     def _new_token(state: dict) -> str:
         while True:
@@ -388,8 +511,8 @@ class PocketfulHandler(BaseHTTPRequestHandler):
             raise RequestError(400, "malformed_request", "Invalid content length")
         try:
             raw = self.rfile.read(length)
-            value = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            value = json.loads(raw.decode("utf-8"), parse_constant=_reject_json_constant)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             raise RequestError(400, "malformed_request", "Request body is not valid JSON") from exc
         if not isinstance(value, dict):
             raise RequestError(400, "malformed_request", "Request body must be a JSON object")
@@ -398,14 +521,22 @@ class PocketfulHandler(BaseHTTPRequestHandler):
     def _path(self) -> str:
         return urlsplit(self.path).path
 
-    def _authenticated_user(self) -> dict:
+    def _authenticated_user(self) -> tuple[dict, str]:
         authorization = self.headers.get("Authorization")
         if authorization is None:
             raise RequestError(401, "unauthenticated", "Bearer token is required")
         parts = authorization.split(" ")
         if len(parts) != 2 or parts[0] != "Bearer" or not parts[1]:
             raise RequestError(401, "unauthenticated", "Bearer token is malformed")
-        return STORE.authenticate(parts[1])
+        return STORE.authenticate(parts[1]), parts[1]
+
+    def _idempotency_key(self) -> str:
+        key = self.headers.get("Idempotency-Key")
+        if key is None or key == "":
+            raise RequestError(
+                400, "missing_idempotency_key", "Idempotency-Key is required"
+            )
+        return key
 
     def _validate_auth_body(self, body: dict) -> tuple[str, str, str | None]:
         email = required_body_string(body, "email")
@@ -428,7 +559,7 @@ class PocketfulHandler(BaseHTTPRequestHandler):
             if path == "/_test/export":
                 self._send_error(404, "not_found", "No such resource")
                 return
-            user = self._authenticated_user()
+            user, _ = self._authenticated_user()
             if path == "/me":
                 self._send_json(200, user)
                 return
@@ -455,7 +586,17 @@ class PocketfulHandler(BaseHTTPRequestHandler):
             if path == "/_test/import":
                 self._send_error(404, "not_found", "No such resource")
                 return
-            self._authenticated_user()
+            user, token = self._authenticated_user()
+            if path == "/payments":
+                key = self._idempotency_key()
+                body = self._read_json_object()
+                if len(key) > 255:
+                    raise validation_error("Idempotency-Key is too long")
+                status, payment = STORE.create_payment_idempotent(
+                    user["user_id"], token, key, body
+                )
+                self._send_json(status, payment)
+                return
             self._send_error(404, "not_found", "No such resource")
         except RequestError as exc:
             self._send_error(exc.status, exc.code, exc.message)
