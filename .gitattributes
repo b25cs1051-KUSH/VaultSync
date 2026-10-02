@@ -1,0 +1,13 @@
+# Keep Unix line endings in every working copy, including Windows clones,
+# so scripts and Dockerfiles behave the same in containers as in the repository.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
