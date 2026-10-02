@@ -4,6 +4,7 @@ Owner: Architect. Only the Architect edits this file.
 Specification: `pocketful/spec/stage-1.md` (pasted in full into every handoff).
 Official check (machine A): `wsl -d Ubuntu -- bash -lc ". ~/.venvs/darkfactory/bin/activate && cd /mnt/e/darkfactory/dark-factory-wearedevs && python -m harness run --track pocketful --repo <clone> --stage 1 --mode isolated"`
 Official check (machine B): `wsl -d Ubuntu --cd /mnt/d/HACKATHONS_/WAD_AMD/dark-factory-wearedevs -- .venv/bin/python -m harness run --track pocketful --repo <clone> --stage 1`
+Stage start: 2026-10-02T16:06+05:30. Readiness: Verifier, Builder, Breaker, Reserve Builder, Reserve Breaker all READY.
 
 ## Acceptance criteria
 
@@ -62,12 +63,12 @@ The shipped sample suite never exercises these. They are mandatory.
 
 States: PLANNED, ASSIGNED, IMPLEMENTED, ATTACKED, VERIFIED, ACCEPTED, REWORK.
 
-### WP0 Adversarial suite (owner: Breaker) — PLANNED
+### WP0 Adversarial suite (owner: Breaker) — ASSIGNED
 Depends on: nothing. Built from the specification, AC, invariants and R1–R20 only.
 - S0.1 Suite skeleton runnable against a base URL. Done means: one command runs it and reports per-test results.
 - S0.2 Tests for R1–R20 and I1–I8, including concurrency bursts of 50. Done means: committed under `stage-1/adversarial/`, each test names the R/I/AC id it covers.
 
-### WP1 Foundation (owner: Builder) — PLANNED
+### WP1 Foundation (owner: Builder) — ASSIGNED
 Depends on: nothing.
 - S1.1 Service skeleton, Dockerfile, RUN.md, `PORT` handling, `GET /health`, JSON error envelope, body parsing (400 on unparseable or non-object). Done means: container builds and `/health` returns 200 in isolated mode.
 - S1.2 **High-risk (data shape, shared state).** State store and `POST /_test/reset` with fixture validation (negative balance 422 changes nothing, minor_units), seeded users with hashed passwords, seeded payments and requests with server timestamps, operators. Done means: reset returns 204 and a second reset fully replaces state. **Checkpoint: hand off after this step.**
@@ -101,6 +102,7 @@ Depends on: WP3, WP4.
 - D4 (assumption). Note length and the 200 limit count Unicode code points. Notes are stored and returned verbatim.
 - D5 (assumption). `transfers` missing, not an array, empty, over 32 entries, or containing a non-object entry is 422 `validation_failed` (§11 "malformed batch shape"). Within entries, ordinary payment field rules apply (wrong-typed handle is 400 per §5).
 - D6 (assumption). Fixture validation on reset: negative balance, `minor_units` outside {0,2,3}, or a body that is not a valid fixture object gives 422 `validation_failed` and changes nothing.
+- D7. All five seats READY at stage start. WP0 assigned to Breaker, WP1 to Builder.
 
 ## Constraints (verbatim from the task)
 
