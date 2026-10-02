@@ -22,11 +22,15 @@ If something is unclear, missing or contradictory, ask the **Architect** in the 
 
 ## 3. Readiness before any work
 
-No seat starts work until every seat, reserves included, has answered the Architect's readiness check with:
+The Architect's readiness request gives each seat the exact check command for its machine. Pull the shared repository, run exactly that command with `--help`, and nothing else: do not search for tools and do not start background tasks. Then reply to the Architect, @mentioning it:
 ```
 READY · <seat> · Harness <name> · Model <id> · pull OK · check tool OK
 ```
-"pull OK" means you pulled the shared repository. "check tool OK" means you ran the task's check command with `--help` and it worked. If you cannot do either, reply `NOT READY` with the error.
+If either step fails, reply `NOT READY` with the error. Work starts when the Verifier, Builder and Breaker are all READY; reserves reply too, but do not block the start.
+
+## 3a. Errors
+
+If a command, tool or check fails in a way you cannot fix yourself, send the Architect one line: `ERROR · <seat> · <what failed> · can I continue: yes/no`. If your own message or reply fails to post, retry once, then report it. Never assume a failed message was delivered.
 
 ## 4. Lifecycle
 
