@@ -68,7 +68,7 @@ Depends on: nothing. Built from the specification, AC, invariants and R1–R20 o
 - S0.1 Suite skeleton runnable against a base URL. Done means: one command runs it and reports per-test results.
 - S0.2 Tests for R1–R20 and I1–I8, including concurrency bursts of 50. Done means: committed under `stage-1/adversarial/`, each test names the R/I/AC id it covers.
 
-### WP1 Foundation (owner: Builder) — S1.2 CHECKPOINT IMPLEMENTED at fd62c3c15a9907a3f843dcffc2bfe35540bb84f6, under attack and verification
+### WP1 Foundation (owner: Builder) — REWORK (S1.2 at fd62c3c ATTACK FAIL: dropped connections under 50 in flight; rework 1)
 Depends on: nothing.
 - S1.1 Service skeleton, Dockerfile, RUN.md, `PORT` handling, `GET /health`, JSON error envelope, body parsing (400 on unparseable or non-object). Done means: container builds and `/health` returns 200 in isolated mode.
 - S1.2 **High-risk (data shape, shared state).** State store and `POST /_test/reset` with fixture validation (negative balance 422 changes nothing, minor_units), seeded users with hashed passwords, seeded payments and requests with server timestamps, operators. Done means: reset returns 204 and a second reset fully replaces state. **Checkpoint: hand off after this step.**
@@ -106,6 +106,7 @@ Depends on: WP3, WP4.
 - D8. Builder push blocked by uncommitted Breaker files in the Builder working tree. Builder stages only its own paths and pulls with --autostash. Breaker works only in its own clone and commits under stage-1/adversarial/.
 - D9. Adversarial suite lives at stage-1/adversarial/ (41 tests, run.py with BASE_URL), moved there by the Breaker at fb53973 in its own clone (VaultSync-breaker on machine B).
 - D10. The stage specification is committed verbatim at stage-1/SPEC.md. Every handoff after the first names it with the exact revision, so every seat on either machine can open the complete text instead of receiving it split across many messages.
+- D11. WP1 S1.2 at fd62c3c ATTACK FAIL: 25 resets + 25 health reads in flight drop connections (RemoteDisconnected). REWORK to Builder. Verification of fd62c3c stopped; the repaired commit is a new candidate.
 
 ## Constraints (verbatim from the task)
 
