@@ -1,5 +1,5 @@
 Harness: Codex
-Model: gpt-5.6-sol
+Model: gpt-5.6-luna
 
 # Mandate: Breaker
 
