@@ -1,5 +1,5 @@
 {
-  "claude_block_usd": 24,
+  "claude_block_usd": 50,
   "codex_block_usd": 0,
   "warn_percent": [85, 95],
   "silence_minutes": 30

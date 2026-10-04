@@ -22,9 +22,18 @@ function Get-BlockUsd {
     if (-not (Test-Path $BandExe)) { return $null }
     $raw = (& $BandExe usage blocks --active --json 2>$null) -join "`n"
     if ($raw) {
-        try { $v = Find-CostValue ($raw | ConvertFrom-Json); if ($null -ne $v) { return [math]::Round($v, 2) } } catch { }
+        try {
+            $b = $raw | ConvertFrom-Json
+            # BAND's own price catalog can be missing for a model (it then reports 0), so weight the
+            # token counts with one fixed set of per-million rates. Limits are calibrated in the same unit.
+            if ($null -ne $b.cacheReadTokens) {
+                return [math]::Round(($b.inputTokens * 5 + $b.outputTokens * 25 + $b.cacheCreationTokens * 6.25 + $b.cacheReadTokens * 0.5) / 1e6, 2)
+            }
+            $v = Find-CostValue $b; if ($null -ne $v) { return [math]::Round($v, 2) }
+        } catch { }
     }
     $text = (& $BandExe usage blocks --active 2>$null) -join "`n"
     if ($text -match '\$\s?([0-9]+(\.[0-9]+)?)') { return [double]$Matches[1] }
+    if ($text -match '\(no active block\)') { return 0.0 }
     return $null
 }
