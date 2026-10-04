@@ -32,6 +32,8 @@ if ($CheckHeartbeat) {
 if (-not $Seat) { Write-Output "ERROR: -Seat is required"; exit 1 }
 
 $limits = Get-Content (Join-Path $PSScriptRoot "factory-limits.json") -Raw | ConvertFrom-Json
+# Optional: watch a clone other than the current directory.
+if ($limits.PSObject.Properties.Name -contains "repo_dir" -and $limits.repo_dir) { Set-Location $limits.repo_dir }
 $levels = @($limits.warn_percent | Sort-Object -Descending)
 $state = @{ Claude = @{ level = 0; usd = 0 }; Codex = @{ level = 0; usd = 0 }; silenceAt = "" }
 if (Test-Path $stateFile) {
@@ -85,6 +87,12 @@ while ($true) {
         if ($queued -gt 0) { Write-Output "MESSAGE: $queued message(s) queued for $Seat. Read them now."; Save-State; exit 0 }
     }
     git fetch --quiet origin $Branch 2>$null | Out-Null
+    # BAND's usage archive is only current after a refresh; refresh at most every 5 minutes.
+    $refreshFile = Join-Path $stateDir "refreshed.txt"
+    if (-not (Test-Path $refreshFile) -or ((Get-Date) - (Get-Item $refreshFile).LastWriteTime).TotalMinutes -ge 5) {
+        & $BandExe usage refresh 2>$null | Out-Null
+        Set-Content -Encoding utf8 $refreshFile (Get-Date -Format o)
+    }
     foreach ($alert in @((Test-Usage "Claude" (Get-BlockUsd -BandExe $BandExe) $limits.claude_block_usd), (Test-Usage "Codex" (Get-CodexUsd) $limits.codex_block_usd))) {
         if ($alert) { Write-Output $alert; Save-State; exit 0 }
     }

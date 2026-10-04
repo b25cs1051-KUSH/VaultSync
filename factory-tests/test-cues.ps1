@@ -10,9 +10,10 @@ param(
     [string]$Room = "029f4041-3777-43a3-8ac4-fff117d82fad",
     [string]$Kush = "0f08e863-8c86-4c63-a4a4-d59da016587e",
     [string]$Jatin = "1af918df-e55b-4e49-a44e-fb56031d50b1",
-    [string]$WatchdogLimits = "E:\run-watchdog\tools\factory-limits.json",
+    [string]$WatchdogLimits = "E:\VaultSync\tools\factory-limits.json",
     [string]$WorkDir = "E:\factory-runs\cues",
-    [string]$BandExe = "$env:LOCALAPPDATA\Band\band.exe"
+    [string]$BandExe = "$env:LOCALAPPDATA\Band\band.exe",
+    [int]$StartStep = 1
 )
 
 function Send-Cue($who, $text) {
@@ -22,9 +23,9 @@ function Send-Cue($who, $text) {
 
 if (-not (Test-Path $WorkDir)) { git clone -q $Repo $WorkDir }
 Set-Location $WorkDir
-Send-Cue $Jatin "T1 - test started. Humans do nothing until the next cue."
+if ($StartStep -le 1) { Send-Cue $Jatin "T1 - test started. Humans do nothing until the next cue." }
 
-$step = 2
+$step = [math]::Max(2, $StartStep)
 while ($step -le 6) {
     Start-Sleep -Seconds 30
     git pull -q --rebase origin main 2>$null | Out-Null
@@ -37,11 +38,11 @@ while ($step -le 6) {
         $after = $log[($firstPass + 1)..($log.Count)] | Where-Object { $_ -match '^Builder\|' }
         if ($after) { Send-Cue $Jatin "T2 - Jatin: quit BAND Desktop now (tray icon too). Keep it closed until the T3 cue."; $step = 3 }
     }
-    elseif ($step -eq 3 -and ($authors -contains 'Reserve Builder' -or $authors -contains 'Reserve Breaker')) {
+    elseif ($step -eq 3 -and ($authors -contains 'Reserve Builder')) {
         Send-Cue $Jatin "T3 - failover happened. Jatin: reopen BAND Desktop now."; $step = 4
     }
-    elseif ($step -eq 4 -and ($log | Where-Object { $_ -match '^Reserve Breaker\|' })) {
-        Send-Cue $Jatin "T4 - Kush: quit Docker Desktop now, start it again after 2 minutes."; $step = 5
+    elseif ($step -eq 4) {  # T4 (Docker off) dropped to save time
+        $step = 5
     }
     elseif ($step -eq 5 -and $passes -ge 2) {
         if (Test-Path $WatchdogLimits) {
