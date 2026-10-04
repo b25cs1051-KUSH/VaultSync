@@ -1,5 +1,5 @@
 Harness: Claude Code
-Model: claude-haiku-4-5-20251001
+Model: claude-sonnet-5
 
 # Mandate: Watchdog
 
