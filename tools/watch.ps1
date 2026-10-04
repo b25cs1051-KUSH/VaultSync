@@ -83,8 +83,15 @@ $deadline = (Get-Date).AddMinutes($Minutes)
 while ($true) {
     Set-Content -Encoding utf8 $heartbeat (Get-Date -Format o)
     if (Test-Path $BandExe) {
-        $queued = @(& $BandExe inbox --as $Seat 2>$null | Where-Object { $_ -match '^\[' }).Count
-        if ($queued -gt 0) { Write-Output "MESSAGE: $queued message(s) queued for $Seat. Read them now."; Save-State; exit 0 }
+        # Report only messages not seen before: BAND can keep an already-handled message queued.
+        $ids = @(& $BandExe inbox --as $Seat 2>$null | Where-Object { $_ -match '^\[[^\]]+\]\s+(\S+)' } | ForEach-Object { ($_ -split '\s+')[1] })
+        $seenFile = Join-Path $stateDir "seen-messages.txt"
+        $seen = if (Test-Path $seenFile) { @(Get-Content $seenFile) } else { @() }
+        $new = @($ids | Where-Object { $seen -notcontains $_ })
+        if ($new.Count -gt 0) {
+            Add-Content -Encoding utf8 $seenFile $new
+            Write-Output "MESSAGE: $($new.Count) new message(s) for $Seat. Read them now."; Save-State; exit 0
+        }
     }
     git fetch --quiet origin $Branch 2>$null | Out-Null
     # BAND's usage archive is only current after a refresh; refresh at most every 5 minutes.
