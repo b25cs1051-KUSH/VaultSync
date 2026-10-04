@@ -328,5 +328,68 @@ class IdempotencyStateTests(unittest.TestCase):
         self.assertEqual(12500, sum(user["balance"] for user in state["users"].values()))
 
 
+class ActivityStateTests(unittest.TestCase):
+    def setUp(self):
+        self.store = SERVER.StateStore()
+        self.store.replace_from_fixture(payment_fixture())
+        self.ada = self.store.login("u_ada@example.com", "correct horse")
+        self.bob = self.store.login("bob@example.com", "correct horse")
+        self.cy = self.store.signup("cy@example.com", "correct horse", "Cy")
+
+    def pay(self, key, visibility="public"):
+        return self.store.create_payment_idempotent(
+            self.ada["user_id"],
+            self.ada["token"],
+            key,
+            {"to_handle": "bob", "amount": 1, "visibility": visibility},
+        )[1]
+
+    def feed(self, account, limit=50, offset=0):
+        return self.store.activity(
+            account["user_id"], account["token"], limit, offset
+        )
+
+    def test_visibility_newest_first_and_pagination(self):
+        public_one = self.pay("public-one")
+        private = self.pay("private", "private")
+        public_two = self.pay("public-two")
+        expected_parties = [
+            public_two["payment_id"],
+            private["payment_id"],
+            public_one["payment_id"],
+        ]
+        self.assertEqual(
+            expected_parties,
+            [item["payment_id"] for item in self.feed(self.ada)["payments"]],
+        )
+        self.assertEqual(
+            expected_parties,
+            [item["payment_id"] for item in self.feed(self.bob)["payments"]],
+        )
+        first_page = self.feed(self.cy, limit=1)
+        second_page = self.feed(self.cy, limit=1, offset=1)
+        self.assertEqual([public_two["payment_id"]], [p["payment_id"] for p in first_page["payments"]])
+        self.assertIs(first_page["has_more"], True)
+        self.assertEqual([public_one["payment_id"]], [p["payment_id"] for p in second_page["payments"]])
+        self.assertIs(second_page["has_more"], False)
+
+    def test_strict_pagination_and_unknown_parameters(self):
+        self.assertEqual((50, 0), SERVER.parse_pagination("ignored=yes"))
+        self.assertEqual((4, 2), SERVER.parse_pagination("limit=04&offset=2&ignored=yes"))
+        for query in (
+            "limit=1e9",
+            "limit=4.0",
+            "limit=+4",
+            "limit=%2B4",
+            "limit=0",
+            "limit=201",
+            "offset=-1",
+            "offset=",
+            "limit=1&limit=2",
+        ):
+            with self.subTest(query=query), self.assertRaises(SERVER.RequestError):
+                SERVER.parse_pagination(query)
+
+
 if __name__ == "__main__":
     unittest.main()

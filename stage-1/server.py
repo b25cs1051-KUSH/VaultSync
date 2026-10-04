@@ -9,7 +9,7 @@ import threading
 from copy import deepcopy
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 
 JSON_TYPE = "application/json; charset=utf-8"
@@ -122,6 +122,26 @@ def canonical_json(value) -> str:
         separators=(",", ":"),
         allow_nan=False,
     )
+
+
+def parse_pagination(query: str) -> tuple[int, int]:
+    parameters = parse_qs(query, keep_blank_values=True)
+
+    def parse_one(name: str, default: int, minimum: int, maximum=None) -> int:
+        values = parameters.get(name)
+        if values is None:
+            return default
+        if len(values) != 1 or re.fullmatch(r"[0-9]+", values[0]) is None:
+            raise validation_error(f"{name} must be plain decimal digits")
+        try:
+            result = int(values[0])
+        except ValueError as exc:
+            raise validation_error(f"{name} is out of range") from exc
+        if result < minimum or (maximum is not None and result > maximum):
+            raise validation_error(f"{name} is out of range")
+        return result
+
+    return parse_one("limit", 50, 1, 200), parse_one("offset", 0, 0)
 
 
 def _require_id(value, field: str) -> str:
@@ -414,6 +434,28 @@ class StateStore:
             lambda state: self._create_payment(state, user_id, body),
         )
 
+    def activity(
+        self, user_id: str, token: str, limit: int, offset: int
+    ) -> dict:
+        with self.lock:
+            state = self._state
+            if state["tokens"].get(token) != user_id:
+                raise RequestError(401, "unauthenticated", "Invalid bearer token")
+            visible = []
+            for payment_id in reversed(state["payment_order"]):
+                payment = state["payments"][payment_id]
+                if (
+                    payment["visibility"] == "public"
+                    or payment["from_user_id"] == user_id
+                    or payment["to_user_id"] == user_id
+                ):
+                    visible.append(payment)
+            page = visible[offset : offset + limit]
+            return {
+                "payments": deepcopy(page),
+                "has_more": offset + limit < len(visible),
+            }
+
     @staticmethod
     def _create_payment(state: dict, user_id: str, body: dict) -> dict:
         if "to_handle" not in body:
@@ -559,9 +601,15 @@ class PocketfulHandler(BaseHTTPRequestHandler):
             if path == "/_test/export":
                 self._send_error(404, "not_found", "No such resource")
                 return
-            user, _ = self._authenticated_user()
+            user, token = self._authenticated_user()
             if path == "/me":
                 self._send_json(200, user)
+                return
+            if path == "/activity":
+                limit, offset = parse_pagination(urlsplit(self.path).query)
+                self._send_json(
+                    200, STORE.activity(user["user_id"], token, limit, offset)
+                )
                 return
             self._send_error(404, "not_found", "No such resource")
         except RequestError as exc:
