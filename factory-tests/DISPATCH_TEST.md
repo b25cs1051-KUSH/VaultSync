@@ -1,6 +1,6 @@
 @Architect TASK (factory test run, not the judged run)
 
-Repository: https://github.com/b25cs1051-KUSH/VaultSync-scratch (branch main). Every seat clones it into a folder named `run-<your seat>` next to its working directory and works only there.
+Repository: https://github.com/b25cs1051-KUSH/Vsultsync-scratch (branch main). Every seat clones it into a folder named `run-<your seat>` next to its working directory and works only there.
 
 Specification: copy E:\darkfactory\dark-factory-wearedevs\pocketful\spec\stage-1.md (machine A) verbatim to `stage-1/SPEC.md`.
 
