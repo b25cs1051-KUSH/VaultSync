@@ -1,4 +1,4 @@
-@Architect TASK (factory test run, not the judged run)
+TASK (factory test run, not the judged run)
 
 Repository: https://github.com/b25cs1051-KUSH/Vsultsync-scratch (branch main). Every seat clones it into a folder named `run-<your seat>` next to its working directory and works only there.
 
@@ -12,4 +12,4 @@ Check commands (official check tool, use exactly these):
 
 Stage gate for this run: the official check in isolated mode for stage 1 with its pass count reported, plus every acceptance criterion inside the scope above. Tests outside the scope are expected to fail and do not block the gate.
 
-Seats: @Watchdog @Verifier @Builder @Breaker, reserves @Reserve Builder @Reserve Breaker.
+Seats (handles): Watchdog @pathakk1601/watchdog, Verifier @pathakk1601/verifier, Builder @jatinsingh6654/builder, Breaker @jatinsingh6654/breaker, Reserve Builder @pathakk1601/reserve-builder, Reserve Breaker @pathakk1601/reserve-breaker. All are already in this room.
