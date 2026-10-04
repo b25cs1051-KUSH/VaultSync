@@ -1,6 +1,7 @@
 <#
 Factory watchdog. Waits until something needs the Architect's attention, then prints one line.
   ALERT USAGE <account> <85|95>%  this account's 5-hour block crossed a warning level
+  ALERT RESUME <account>          the window reset after the account reached the top level
   ALERT SILENCE                   no commit and no local seat activity for silence_minutes
   MESSAGE                         a message is queued for the given seat
   TIMEOUT                         nothing to report for -Minutes minutes
@@ -48,8 +49,14 @@ function Save-State { $state | ConvertTo-Json -Depth 4 | Set-Content -Encoding u
 
 function Test-Usage($account, $usd, $cap) {
     if ($null -eq $usd -or $cap -le 0) { return $null }
-    # A new 5-hour block starts lower: forget earlier warnings.
-    if ($usd + 0.5 -lt $state[$account].usd) { $state[$account].level = 0 }
+    # A new 5-hour block starts lower: forget earlier warnings. If the account had reached the
+    # top level (the stage stopped for usage), tell the Architect it can resume.
+    if ($usd + 0.5 -lt $state[$account].usd) {
+        $wasBlocked = $state[$account].level -ge $levels[0]
+        $state[$account].level = 0
+        $state[$account].usd = $usd
+        if ($wasBlocked) { return "ALERT RESUME $account - the 5-hour usage window has reset" }
+    }
     $state[$account].usd = $usd
     $pct = [math]::Round(100 * $usd / $cap)
     foreach ($l in $levels) {
@@ -105,7 +112,9 @@ while ($true) {
     }
     $idle = Get-LastActivityMinutes
     $sinceAlert = if ($state.silenceAt) { ((Get-Date) - [datetime]$state.silenceAt).TotalMinutes } else { [double]::MaxValue }
-    if ($idle -ge $limits.silence_minutes -and $sinceAlert -ge $limits.silence_minutes) {
+    # While an account sits at the top usage level the stage is stopped on purpose: no silence alerts.
+    $blocked = ($state.Claude.level -ge $levels[0]) -or ($state.Codex.level -ge $levels[0])
+    if (-not $blocked -and $idle -ge $limits.silence_minutes -and $sinceAlert -ge $limits.silence_minutes) {
         $state.silenceAt = (Get-Date -Format o)
         Write-Output "ALERT SILENCE - no commit and no seat activity for $([math]::Round($idle)) minutes"
         Save-State; exit 0
