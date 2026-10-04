@@ -22,7 +22,7 @@ function Send-Cue($who, $text) {
 
 if (-not (Test-Path $WorkDir)) { git clone -q $Repo $WorkDir }
 Set-Location $WorkDir
-Send-Cue $Kush "T1 - test started. Humans do nothing until the next cue."
+Send-Cue $Jatin "T1 - test started. Humans do nothing until the next cue."
 
 $step = 2
 while ($step -le 6) {
@@ -41,7 +41,7 @@ while ($step -le 6) {
         Send-Cue $Jatin "T3 - failover happened. Jatin: reopen BAND Desktop now."; $step = 4
     }
     elseif ($step -eq 4 -and ($log | Where-Object { $_ -match '^Reserve Breaker\|' })) {
-        Send-Cue $Kush "T4 - Kush: quit Docker Desktop now, start it again after 2 minutes."; $step = 5
+        Send-Cue $Jatin "T4 - Kush: quit Docker Desktop now, start it again after 2 minutes."; $step = 5
     }
     elseif ($step -eq 5 -and $passes -ge 2) {
         if (Test-Path $WatchdogLimits) {
@@ -51,13 +51,13 @@ while ($step -le 6) {
             if ($null -eq $now) { $now = 1 }
             $l.claude_block_usd = [math]::Round($now / 0.9, 2)   # current usage now reads as about 90%
             $l | ConvertTo-Json | Set-Content -Encoding utf8 $WatchdogLimits
-            Send-Cue $Kush "T5 - Claude usage limit lowered for the Watchdog. Expect ALERT USAGE Claude. Humans do nothing."
+            Send-Cue $Jatin "T5 - Claude usage limit lowered for the Watchdog. Expect ALERT USAGE Claude. Humans do nothing."
         } else {
-            Send-Cue $Kush "T5 - could not find $WatchdogLimits. Ask Claude Code to inject T5."
+            Send-Cue $Jatin "T5 - could not find $WatchdogLimits. Ask Claude Code to inject T5."
         }
         $step = 6
     }
     elseif ($step -eq 6 -and (Test-Path "handoffs/architect")) {
-        Send-Cue $Kush "T6 - final report is in. Humans do nothing for 15 minutes. Test conductor stopping."; $step = 7
+        Send-Cue $Jatin "T6 - final report is in. Humans do nothing for 15 minutes. Test conductor stopping."; $step = 7
     }
 }
